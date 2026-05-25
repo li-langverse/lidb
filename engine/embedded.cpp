@@ -1,36 +1,60 @@
 #include "lidb/embedded.hpp"
-#include <array>
-#include <cstdio>
-#include <cstdlib>
+
+#include <cctype>
 #include <fstream>
 #include <sstream>
+
 namespace lidb {
 namespace {
-std::filesystem::path repo_root() {
-  auto cwd = std::filesystem::current_path();
-  if (std::filesystem::exists(cwd / "migrations" / "001_registry.sql")) return cwd;
-  if (std::filesystem::exists(cwd.parent_path() / "migrations" / "001_registry.sql")) return cwd.parent_path();
-  return cwd;
+
+std::string extract_insert_table(std::string_view sql) {
+  auto lq = std::string(sql);
+  auto pos = lq.find("INTO ");
+  if (pos == std::string::npos) pos = lq.find("into ");
+  if (pos == std::string::npos) return "unknown";
+  auto rest = lq.substr(pos + 5);
+  auto table = rest.substr(0, rest.find('('));
+  while (!table.empty() && std::isspace(static_cast<unsigned char>(table.back()))) table.pop_back();
+  return table;
 }
-int run_cmd(const std::string& c) { return std::system(c.c_str()); }
-std::string q(std::string_view s) {
-  std::string o = "'";
-  for (char c : s) { if (c == '\'') o += "'\\''"; else o.push_back(c); }
-  return o + "'";
+
+}  // anonymous namespace
+
+std::string EmbeddedDatabase::flatten_catalog_sql(std::string_view sql) {
+  std::string out(sql);
+  for (std::size_t i = 0; i + 1 < out.size();) {
+    if (out[i] == '$' && std::isdigit(static_cast<unsigned char>(out[i + 1]))) {
+      out[i] = '?';
+      ++i;
+      while (i < out.size() && std::isdigit(static_cast<unsigned char>(out[i]))) out.erase(i);
+      continue;
+    }
+    ++i;
+  }
+  while (!out.empty() && std::isspace(static_cast<unsigned char>(out.back()))) out.pop_back();
+  if (!out.empty() && out.back() == ';') out.pop_back();
+  return out;
 }
-bool nonempty(const std::filesystem::path& p) { return std::filesystem::exists(p) && std::filesystem::file_size(p) > 0; }
-}
+
 EmbeddedDatabase::EmbeddedDatabase(EmbeddedConfig config) : config_(std::move(config)) {}
+
 bool EmbeddedDatabase::open() {
   if (status_.open) return true;
   auto root = config_.data_dir / ".lidb";
   std::filesystem::create_directories(root / "pool");
   status_.data_dir = config_.data_dir;
-  status_.catalog_path = root / "catalog.db";
+  status_.catalog_path = root / "catalog.heap";
   status_.wal_path = root / "wal" / "00000001.seg";
+  status_.backend = "native";
   std::filesystem::create_directories(status_.wal_path.parent_path());
   pool_.emplace(config_.pool);
+  std::filesystem::create_directories(root / "heap");
+  heap_.emplace(root / "heap", config_.pool.page_size);
   wal_.emplace(status_.wal_path);
+  (void)heap_->allocate_page();
+  native_exec_.emplace(*wal_, changefeed_);
+  catalog_ = std::make_unique<NativeCatalog>(status_.catalog_path);
+  if (!catalog_->load_or_create()) return false;
   std::vector<std::byte> payload(8);
   status_.wal_lsn = wal_->append(WalRecordType::kNoop, payload);
   (void)pool_->pin(PageId{});
@@ -38,28 +62,74 @@ bool EmbeddedDatabase::open() {
   status_.pool_pinned = pool_->pinned_count();
   return true;
 }
-void EmbeddedDatabase::close() { if (pool_) pool_->unpin(PageId{}); pool_.reset(); wal_.reset(); status_ = {}; }
-bool EmbeddedDatabase::migrate() {
-  if (!status_.open) return false;
-  auto repo = repo_root();
-  auto emb = repo / "migrations" / "001_registry_embedded.sql";
-  { std::ofstream m(status_.data_dir / ".lidb" / "migration_intent.txt"); m << "smoke_backend=sqlite3\n"; }
-  if (!std::filesystem::exists(emb)) return false;
-  std::string cmd = "sqlite3 " + q(status_.catalog_path.string()) + " < " + q(emb.string()) +
-    " && sqlite3 " + q(status_.catalog_path.string()) +
-    " \"INSERT OR REPLACE INTO schema_migrations(version,checksum) VALUES ('001_registry','smoke');\"";
-  return run_cmd(cmd) == 0 && nonempty(status_.catalog_path);
+
+void EmbeddedDatabase::close() {
+  if (pool_) pool_->unpin(PageId{});
+  pool_.reset();
+  native_exec_.reset();
+  heap_.reset();
+  catalog_.reset();
+  wal_.reset();
+  status_ = {};
 }
+
+bool EmbeddedDatabase::migrate() {
+  if (!status_.open || !catalog_) return false;
+  { std::ofstream m(status_.data_dir / ".lidb" / "migration_intent.txt"); m << "smoke_backend=native\n"; }
+  if (catalog_->table_count("schema_migrations").value_or(0) > 0) return true;
+  return catalog_->apply_bootstrap_schema();
+}
+
+std::string EmbeddedDatabase::exec_result_json(const NativeExecResult& result) {
+  std::ostringstream out;
+  out << "{\"rows\":[";
+  bool first_row = true;
+  for (const auto& row : result.rows) {
+    if (!first_row) out << ',';
+    first_row = false;
+    out << '{';
+    bool first_col = true;
+    for (const auto& [k, v] : row.cols) {
+      if (!first_col) out << ',';
+      first_col = false;
+      out << '"' << k << "\":\"" << v << '"';
+    }
+    out << '}';
+  }
+  out << "],\"affected\":" << result.affected << '}';
+  return out.str();
+}
+
+NativeExecResult EmbeddedDatabase::exec_parameterized(std::string_view sql,
+                                                      const std::vector<std::string>& params) {
+  if (!status_.open || !catalog_ || !native_exec_) return {};
+  const auto flat = flatten_catalog_sql(sql);
+  auto result = catalog_->exec(flat, params);
+  if (result.affected > 0) status_.wal_lsn = native_exec_->insert(extract_insert_table(flat), {});
+  return result;
+}
+
 std::optional<std::string> EmbeddedDatabase::exec_sql(std::string_view sql) {
-  if (!status_.open || !nonempty(status_.catalog_path)) return std::nullopt;
-  std::string cmd = "sqlite3 -batch " + q(status_.catalog_path.string()) + " " + q(std::string(sql)) + " 2>&1";
-  FILE* pipe = popen(cmd.c_str(), "r");
-  if (!pipe) return std::nullopt;
-  std::ostringstream out; std::array<char, 256> buf{};
-  while (fgets(buf.data(), static_cast<int>(buf.size()), pipe)) out << buf.data();
-  if (pclose(pipe) != 0) return std::nullopt;
-  auto s = out.str();
+  auto res = exec_parameterized(sql, {});
+  if (res.rows.empty() && res.affected == 0) {
+    const auto flat = flatten_catalog_sql(sql);
+    if (flat.find("INSERT") == 0 || flat.find("insert") == 0) return std::optional<std::string>{""};
+    return std::nullopt;
+  }
+  if (res.rows.size() == 1 && res.rows[0].cols.size() == 1) return res.rows[0].cols.begin()->second;
+  std::ostringstream lines;
+  for (const auto& row : res.rows) {
+    bool first = true;
+    for (const auto& [_, v] : row.cols) {
+      if (!first) lines << ' ';
+      first = false;
+      lines << v;
+    }
+    lines << '\n';
+  }
+  auto s = lines.str();
   if (!s.empty() && s.back() == '\n') s.pop_back();
   return s;
 }
-}
+
+}  // namespace lidb
