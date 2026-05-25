@@ -17,6 +17,7 @@
 - **PH-DB-3 gap:** ~~`liorm/embed_engine.py` wires `execute()` to `lidb_embed` SQLite~~ superseded by WP-N2 native embed.
 - **PH-DB-3 changefeed:** native WAL `subscribe` + C poll/Unix API (`engine/changefeed.*`, `docs/changefeed.md`).
 - **PH-DB-3.1:** sqlite cutover — archive `migrations/*_embedded.sql`, `scripts/check_no_sqlite.sh`, CI native-only ([2026-05-25-ph-db-3-1-sqlite-cutover.md](docs/release-notes/2026-05-25-ph-db-3-1-sqlite-cutover.md)).
+- GitHub repo description and README tagline for org hygiene (WP-A4); canonical string in `.github/repo-description`.
 
 ### Added
 
