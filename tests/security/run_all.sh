@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PH-DB-2: security regression harness — CVE scripts with stub probes.
+# PH-DB-2 + PH-DB-5: security regression harness (CVE + RLS).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -16,7 +16,7 @@ else
   exit 0
 fi
 
-for t in "$ROOT"/tests/security/cve-*.sh; do
+for t in "$ROOT"/tests/security/cve-*.sh "$ROOT"/tests/security/rls-*.test.sh; do
   [[ -f "$t" ]] || continue
   name="$(basename "$t" .sh)"
   if out="$(PYTHONPATH="$ROOT" bash "$t" 2>&1)"; then
