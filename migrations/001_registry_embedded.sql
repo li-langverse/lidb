@@ -1,3 +1,4 @@
+-- DEPRECATED (PH-DB-N1): use native bootstrap in engine/native_catalog.cpp
 -- SQLite subset for PH-DB-1 embedded smoke only.
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT (datetime('now')));
