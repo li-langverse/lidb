@@ -4,13 +4,35 @@
 
 ## PH-DB-1 engine status (honest)
 
-| Surface | PH-DB-1 | Notes |
-|---------|---------|-------|
-| Embedded open/close | **Stub** | `engine/` + `lidb_embed` CLI |
-| WAL | **Append-only stub** | `WalWriter` (`LIDW` records); no replay |
-| Buffer pool | **Pin/unpin stub** | 8 KiB pages; no eviction |
-| SQL execution | **Smoke backend** | `sqlite3` + `001_registry_embedded.sql` |
+| Surface | PH-DB-1 (current) | Target (native N2–N4) |
+|---------|-------------------|------------------------|
+| Embedded open/close | **Stub** | `lidb_embed` + in-process `lis` embed |
+| WAL | **Append-only stub** | Replay + checkpoint (N2) |
+| Buffer pool | **Pin/unpin stub** | 8 KiB pages + eviction (N2) |
+| SQL execution | **Deprecated smoke** → **Native** (N3) | C++/Li executor over `001_registry.sql` |
 | Target DDL | **Documented** | `001_registry.sql` (Postgres-shaped) |
+
+## SQLite smoke — REMOVED
+
+**Status:** Deprecated 2026-05-25; removal gate **PH-DB-3.1** (see [`architecture-native-li.md`](./architecture-native-li.md), [`roadmap/proposals/lidb-native-li-matrices.md`](https://github.com/li-langverse/roadmap/blob/main/proposals/lidb-native-li-matrices.md)).
+
+| Removed / deprecated | Replacement |
+|----------------------|-------------|
+| `sqlite3` CLI in `scripts/smoke.sh` | Native `lidb_embed exec` |
+| `migrations/001_registry_embedded.sql` | `migrations/001_registry.sql` (native catalog) |
+| `liorm/embed_engine.py` `sqlite3` connection | `lidb_embed` parameterized API only |
+| `engine/embedded.cpp` shell to `sqlite3` | `Catalog` + `Executor` in `engine/` |
+
+### Migration path (dev data)
+
+1. **Export** (optional, if you have local smoke rows):  
+   `sqlite3 "$LI_DATA_DIR/.lidb/catalog.db" .dump > /tmp/lidb-smoke-export.sql`
+2. **Reset** data dir: `lis db stop` then `rm -rf "$LI_DATA_DIR"` or point `LI_DATA_DIR` at a fresh path.
+3. **Migrate** native: `lis db migrate` / `lidb_embed migrate` applies `001_registry.sql`.
+4. **Re-import** only rows matching registry columns (manual SQL or future `lidb import` in N4).
+5. **Verify:** `bash scripts/smoke.sh` (native gate) and `bash scripts/run_tests.sh`.
+
+CI will drop the `sqlite3` package requirement when the cutover PR (native WP **N4**) merges.
 
 ## In scope (v1)
 

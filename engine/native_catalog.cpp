@@ -165,12 +165,12 @@ std::string NativeCatalog::unquote_literal(std::string_view lit) {
 NativeExecResult NativeCatalog::exec(std::string_view sql, const std::vector<std::string>& params) {
   auto q = trim_sql(sql);
   auto lq = lower(q);
-  if (lq.rfind("select", 0) == 0) return exec_select(q);
+  if (lq.rfind("select", 0) == 0) return exec_select(q, params);
   if (lq.rfind("insert", 0) == 0) return exec_insert(q, params);
   return {};
 }
 
-NativeExecResult NativeCatalog::exec_select(std::string_view sql) {
+NativeExecResult NativeCatalog::exec_select(std::string_view sql, const std::vector<std::string>& params) {
   NativeExecResult result;
   auto q = trim_sql(sql);
   auto lq = lower(q);
@@ -197,10 +197,20 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql) {
   auto where_pos = lq.find(" where ");
   if (where_pos != std::string::npos) {
     auto clause = trim(q.substr(where_pos + 7));
+    auto limit_pos = lower(clause).find(" limit ");
+    if (limit_pos != std::string::npos) clause = trim(clause.substr(0, limit_pos));
     auto eq = clause.find('=');
     if (eq != std::string::npos) {
       where_col = trim(clause.substr(0, eq));
-      where_val = unquote_literal(trim(clause.substr(eq + 1)));
+      const auto rhs = trim(clause.substr(eq + 1));
+      if (!rhs.empty() && rhs[0] == '?') {
+        if (params.empty()) return result;
+        where_val = params[0];
+      } else {
+        where_val = unquote_literal(rhs);
+      }
+      auto dot = where_col->rfind('.');
+      if (dot != std::string::npos) where_col = where_col->substr(dot + 1);
     }
   }
 
@@ -229,7 +239,8 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql) {
     }
     NativeRow out;
     for (const auto& [k, v] : row.cols) {
-      if (sel_part == "*" || lower(k) == col) out.cols[k] = v;
+      if (sel_part == "*") { out.cols[k] = v; }
+      else if (lower(k) == col) { out.cols[k] = v; }
     }
     if (!out.cols.empty()) result.rows.push_back(out);
   }

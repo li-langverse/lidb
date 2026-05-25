@@ -41,6 +41,9 @@ class EmbeddedDatabase {
   std::optional<std::string> exec_sql(std::string_view sql);
   NativeExecResult exec_parameterized(std::string_view sql, const std::vector<std::string>& params = {});
   static std::string exec_result_json(const NativeExecResult& result);
+  WalWriter* wal_writer();
+  Changefeed* changefeed_hub();
+  NativeExecutor* native_executor();
 
  private:
   static std::string flatten_catalog_sql(std::string_view sql);

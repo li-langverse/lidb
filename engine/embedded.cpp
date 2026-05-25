@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <fstream>
+#include <regex>
 #include <sstream>
 
 namespace lidb {
@@ -22,15 +23,12 @@ std::string extract_insert_table(std::string_view sql) {
 
 std::string EmbeddedDatabase::flatten_catalog_sql(std::string_view sql) {
   std::string out(sql);
-  for (std::size_t i = 0; i + 1 < out.size();) {
-    if (out[i] == '$' && std::isdigit(static_cast<unsigned char>(out[i + 1]))) {
-      out[i] = '?';
-      ++i;
-      while (i < out.size() && std::isdigit(static_cast<unsigned char>(out[i]))) out.erase(i);
-      continue;
-    }
-    ++i;
-  }
+  static const std::regex triple(R"x("([^"]+)"\."([^"]+)"\."([^"]+)")x");
+  static const std::regex dbl(R"x("([^"]+)"\."([^"]+)")x");
+  static const std::regex param(R"(\$(\d+))");
+  out = std::regex_replace(out, triple, "$3");
+  out = std::regex_replace(out, dbl, "$2");
+  out = std::regex_replace(out, param, "?");
   while (!out.empty() && std::isspace(static_cast<unsigned char>(out.back()))) out.pop_back();
   if (!out.empty() && out.back() == ';') out.pop_back();
   return out;
@@ -131,5 +129,9 @@ std::optional<std::string> EmbeddedDatabase::exec_sql(std::string_view sql) {
   if (!s.empty() && s.back() == '\n') s.pop_back();
   return s;
 }
+
+WalWriter* EmbeddedDatabase::wal_writer() { return wal_ ? &*wal_ : nullptr; }
+Changefeed* EmbeddedDatabase::changefeed_hub() { return status_.open ? &changefeed_ : nullptr; }
+NativeExecutor* EmbeddedDatabase::native_executor() { return native_exec_ ? &*native_exec_ : nullptr; }
 
 }  // namespace lidb
