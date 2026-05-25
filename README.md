@@ -28,6 +28,7 @@ Requires `cmake` and `python3` only (native `lidb_embed`; sqlite3 smoke removed 
 
 ## Quick links
 
+- [Learned from (vertical survey)](docs/learned-from.md)
 - [Footprint targets](docs/footprint.md)
 - [Postgres subset v1](docs/pg-subset-v1.md)
 - [liorm API sketch](liorm/README.md)

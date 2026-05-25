@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 ### Changed
 - **PH-DB-N1**: Native heap pages + WAL read/append; `scripts/smoke.sh` and `liorm/embed_engine.py` use `lidb_embed` only (sqlite3 smoke removed).
 
@@ -13,6 +14,10 @@
 - **WP-N2:** Native Li SQL (`sql/parser/`, `sql/li/README.md`) — `lidb_embed exec-json`; no Python `sqlite3` in `liorm/embed_engine.py`.
 - **PH-DB-3 gap:** ~~`liorm/embed_engine.py` wires `execute()` to `lidb_embed` SQLite~~ superseded by WP-N2 native embed.
 - **PH-DB-3 changefeed:** native WAL `subscribe` + C poll/Unix API (`engine/changefeed.*`, `docs/changefeed.md`).
+=======
+- **PH-DB-0:** `docs/learned-from.md` — vertical survey (OLTP, analytics, realtime, graph, vector, ORM security) with Keep/Reject/Adapt; SQLite not a production backend.
+- **PH-DB-3 gap:** `liorm/embed_engine.py` wires `execute()` to `lidb_embed` SQLite when engine ready.
+>>>>>>> 23ef021 (docs(PH-DB-0): add learned-from vertical survey)
 
 ### Added
 
