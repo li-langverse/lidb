@@ -33,7 +33,7 @@ class NativeCatalog {
   static std::string trim_sql(std::string_view sql);
   static std::vector<std::string> split_csv(std::string_view s);
   static std::string unquote_literal(std::string_view lit);
-  NativeExecResult exec_select(std::string_view sql);
+  NativeExecResult exec_select(std::string_view sql, const std::vector<std::string>& params);
   NativeExecResult exec_insert(std::string_view sql, const std::vector<std::string>& params);
 
   std::filesystem::path snapshot_path_;

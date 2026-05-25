@@ -1,0 +1,55 @@
+# PH-DB-3.1: native lidb_embed only — no sqlite3 package or binary.
+name: ci
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  native-smoke-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assert sqlite3 not installed
+        run: |
+          if command -v sqlite3 >/dev/null 2>&1; then
+            echo "sqlite3 must not be on PATH for PH-DB-3.1 CI" >&2
+            exit 1
+          fi
+          bash scripts/check_no_sqlite.sh
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cmake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Native smoke
+        run: bash scripts/smoke.sh
+
+      - name: Unit tests + security harness
+        run: bash scripts/run_tests.sh
+
+  audit-suite:
+    name: audit-suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cmake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Run WP-N5 audit suite
+        env:
+          LIDB_ENGINE_READY: "1"
+          LIDB_SKIP_VALGRIND: "1"
+        run: |
+          chmod +x scripts/*.sh tests/security/*.sh
+          bash ./scripts/run_audit_suite.sh
