@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PH-DB-2 + PH-DB-5: security regression harness (CVE + RLS).
+# PH-DB-2 + PH-DB-5 + WP-N5: security regression harness (CVE + RLS + audit).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -16,8 +16,13 @@ else
   exit 0
 fi
 
-for t in "$ROOT"/tests/security/cve-*.sh "$ROOT"/tests/security/rls-*.test.sh; do
-  [[ -f "$t" ]] || continue
+shopt -s nullglob
+for t in \
+  "$ROOT"/tests/security/cve-*.sh \
+  "$ROOT"/tests/security/rls-*.test.sh \
+  "$ROOT"/tests/security/parallel-race-*.test.sh \
+  "$ROOT"/tests/security/memory-leak-*.test.sh \
+  "$ROOT"/tests/security/audit-log-*.test.sh; do
   name="$(basename "$t" .sh)"
   if out="$(PYTHONPATH="$ROOT" bash "$t" 2>&1)"; then
     echo "$out"
