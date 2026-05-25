@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **tier_db CSV smoke bench** (`scripts/bench/tier_db_csv.sh`) — [2026-05-25-tier-db-measured-csv.md](docs/release-notes/2026-05-25-tier-db-measured-csv.md).
+
 ### Changed
 - **PH-DB integration:** Merge N2 native SQL, changefeed, WP-N5 audit harness, and PH-DB-3.1 sqlite cutover onto main N1 heap/WAL ([2026-05-25-lidb-native-integration-main.md](docs/release-notes/2026-05-25-lidb-native-integration-main.md)).
 - **PH-DB-N1**: Native heap pages + WAL read/append; `scripts/smoke.sh` and `liorm/embed_engine.py` use `lidb_embed` only (sqlite3 smoke removed).
@@ -32,3 +36,7 @@
 - **PH-DB-5**: `tests/security/rls-*.test.sh` stubs (tenant isolation, JWT GUC, service_role bypass).
 - **PH-DB-1**: Greenfield scaffold — migrations, footprint/SQL subset docs, storage smoke, toolchain manifest.
 - **PH-DB-2**: `liorm/` and `liq/` API skeletons and README sketches (prior PR).
+
+### Added
+
+- **tier_db CSV smoke bench** (`scripts/bench/tier_db_csv.sh`) for benchmarks catalog ingest — [2026-05-25-tier-db-measured-csv.md](docs/release-notes/2026-05-25-tier-db-measured-csv.md).
