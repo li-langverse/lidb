@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **PH-DB-3 gap:** `liorm/embed_engine.py` wires `execute()` to `lidb_embed` SQLite when engine ready.
+
 ### Added
 
 - **PH-DB-1**: Engine skeleton (`engine/`), `lidb_embed` CLI, smoke INSERT/SELECT, `001_registry_embedded.sql`, research mirror.
