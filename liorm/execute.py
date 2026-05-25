@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from liorm.errors import OrmError, ParameterMismatch, UnknownPlan
+from liorm.errors import ParameterMismatch, UnknownPlan
 
 _PLANS: dict[str, _RegisteredPlan] = {}
 
@@ -78,14 +78,23 @@ def execute(plan_id: str, params: dict[str, Any]) -> ExecuteResult:
             )
 
     bound = _ordered_params(plan.param_schema, params)
-    # Stub engine: return synthetic row metadata without running SQL.
-    rows = [{"_stub": True, "plan": plan.name, "param_count": len(bound)}]
+    rows = _run_engine(plan.sql, bound)
     return ExecuteResult(
         plan_id=plan_id,
         sql=plan.sql,
         bound_params=bound,
         rows=rows,
     )
+
+
+def _run_engine(sql: str, bound: list[Any]) -> list[dict[str, Any]]:
+    from liorm import embed_engine
+
+    if not embed_engine.engine_ready():
+        raise RuntimeError(
+            "embedded engine unavailable (native lidb_embed required; PH-DB-3.1 sqlite cutover)"
+        )
+    return embed_engine.execute_sql(sql, bound)
 
 
 def clear_plans() -> None:

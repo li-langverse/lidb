@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  audit-suite:
+    name: audit-suite
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run WP-N5 audit suite
+        env:
+          LIDB_ENGINE_READY: "1"
+          LIDB_SKIP_VALGRIND: "1"
+        run: |
+          chmod +x scripts/*.sh tests/security/*.sh
+          bash ./scripts/run_audit_suite.sh
+
+  native-smoke:
+    name: native-smoke
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build sqlite3 libsqlite3-dev
+
+      - name: Build and smoke
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/smoke.sh

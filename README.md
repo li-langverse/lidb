@@ -8,7 +8,19 @@ Li-native Postgres-shaped database engine (library + embedded server). Part of t
 ./scripts/smoke.sh
 ```
 
-Requires `cmake` and `python3` only (native `lidb_embed`; sqlite3 smoke removed PH-DB-N1). Not production Postgres.
+Requires `cmake`, `python3`. **`sqlite3` is PH-DB-1 smoke only** — removed at **PH-DB-3.1** ([`docs/architecture-native-li.md`](docs/architecture-native-li.md)). Not production Postgres.
+
+## Benchmark harnesses (WP-N4)
+
+When `BENCH_DB_*_RUN_HARNESS=1`, **benchmarks** invokes scripts under `scripts/bench/`:
+
+| Env | Script | Tier |
+|-----|--------|------|
+| `BENCH_DB_SECURITY_RUN_HARNESS=1` | `scripts/bench/security_harness.sh` | `tier_db_security` |
+| `BENCH_DB_MEMORY_RUN_HARNESS=1` | `scripts/bench/memory_footprint.sh` | `tier_db_memory` |
+| `BENCH_DB_PARALLEL_RUN_HARNESS=1` | `scripts/bench/parallel_load.sh` | `tier_db_parallel` |
+
+Optional: `BENCH_PROFILE=ci|nightly`, `LIDB_EMBED`, `LIDB_RLS_HARNESS=1` (RLS probes). JSON lines via `harness_emit.py` for benchmarks ingest.
 
 ## Layout
 
@@ -28,6 +40,7 @@ Requires `cmake` and `python3` only (native `lidb_embed`; sqlite3 smoke removed 
 
 ## Quick links
 
+- [Learned from (vertical survey)](docs/learned-from.md)
 - [Footprint targets](docs/footprint.md)
 - [Postgres subset v1](docs/pg-subset-v1.md)
 - [liorm API sketch](liorm/README.md)
