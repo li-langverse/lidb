@@ -4,6 +4,8 @@
 
 ### Added
 
+- **PH-DB-1**: Engine skeleton (`engine/`), `lidb_embed` CLI, smoke INSERT/SELECT, `001_registry_embedded.sql`, research mirror.
+
 - **PH-DB-1**: Greenfield scaffold — migrations, footprint/SQL subset docs, storage smoke, toolchain manifest.
 - **PH-DB-2**: `liorm/` and `liq/` API skeletons and README sketches.
 - **PH-DB-2**: `docs/liq-spec.md` (token efficiency, Lang→IR→SQL pipeline).

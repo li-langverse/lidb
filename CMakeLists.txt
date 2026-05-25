@@ -1,8 +1,22 @@
-# PH-DB-1 scaffold — full engine target in PH-DB-2.
+# PH-DB-1 engine skeleton — full heap/WAL replay in PH-DB-2.
 cmake_minimum_required(VERSION 3.20)
 project(lidb LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_library(lidb_engine
+  engine/buffer_pool.cpp
+  engine/wal.cpp
+  engine/embedded.cpp
+)
+target_include_directories(lidb_engine PUBLIC engine/include)
+target_compile_features(lidb_engine PUBLIC cxx_std_20)
+
+add_executable(lidb_embed engine/cli/embed_main.cpp)
+target_link_libraries(lidb_embed PRIVATE lidb_engine)
 
 add_library(lidb_storage_smoke STATIC src/storage_smoke.cpp)
 target_compile_features(lidb_storage_smoke PUBLIC cxx_std_20)
 
-# TODO PH-DB-2: lidb_core (WAL + heap), lidb_embedded, install rules
+# TODO PH-DB-2: install(TARGETS lidb_engine lidb_embed), lidb wire server, lic interop

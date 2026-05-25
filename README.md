@@ -2,6 +2,14 @@
 
 Li-native Postgres-shaped database engine (library + embedded server). Part of the **PH-DB** program for registry v2 and the lean **lidb + lis** bundle.
 
+## Smoke (PH-DB-1)
+
+```bash
+./scripts/smoke.sh
+```
+
+Requires `cmake`, `sqlite3`, `python3`. Not production Postgres.
+
 ## Layout
 
 | Path | Phase | Role |
