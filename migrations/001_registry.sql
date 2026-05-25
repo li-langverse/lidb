@@ -67,4 +67,15 @@ CREATE TABLE blocklist (
 CREATE INDEX idx_blocklist_package_name ON blocklist (package_name);
 CREATE INDEX idx_blocklist_tree_digest ON blocklist (tree_digest);
 
+
+-- Migration bookkeeping (lis db migrate / embedded apply)
+CREATE TABLE schema_migrations (
+    version         TEXT PRIMARY KEY,
+    checksum        TEXT NOT NULL,
+    applied_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO schema_migrations (version, checksum)
+VALUES ('001_registry', 'pending:computed-at-apply-time');
+
 COMMIT;

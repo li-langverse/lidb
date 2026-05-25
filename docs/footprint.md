@@ -36,6 +36,18 @@ Documented here for traceability; implementation is PH-DB-5+.
 | Realtime | — | +48 MB optional module |
 | Vector (pgvector-shaped) | — | +128 MB when index loaded |
 
+## Measurement
+
+| Check | PH-DB-1 | PH-DB-7 target |
+|-------|---------|----------------|
+| Functional smoke | `./scripts/smoke.sh` | + 1k version seed |
+| RSS sampling | not gated in smoke | `lidb-bench --profile registry-min` |
+
+### PH-DB-1 smoke expectations
+
+- Build: `cmake` Release `lidb_embed` under `build/smoke/`.
+- Data: temp dir with `.lidb/catalog.db` (sqlite smoke) and WAL segment stub.
+
 ## Measurement (TODO PH-DB-7)
 
 - `scripts/smoke.sh` → placeholder until `lidb-bench` reports RSS via `/proc` or macOS `ps`.
