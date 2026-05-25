@@ -2,6 +2,16 @@
 
 **lidb** aims for Postgres-*shaped* SQL and wire ergonomics, not feature parity. This document is the explicit **NOT** list for PH-DB-1 … PH-DB-3 unless a later phase promotes an item.
 
+## PH-DB-1 engine status (honest)
+
+| Surface | PH-DB-1 | Notes |
+|---------|---------|-------|
+| Embedded open/close | **Stub** | `engine/` + `lidb_embed` CLI |
+| WAL | **Append-only stub** | `WalWriter` (`LIDW` records); no replay |
+| Buffer pool | **Pin/unpin stub** | 8 KiB pages; no eviction |
+| SQL execution | **Smoke backend** | `sqlite3` + `001_registry_embedded.sql` |
+| Target DDL | **Documented** | `001_registry.sql` (Postgres-shaped) |
+
 ## In scope (v1)
 
 - `CREATE TABLE`, `INSERT`, `UPDATE`, `DELETE`, `SELECT` (single-statement, parameterized)
