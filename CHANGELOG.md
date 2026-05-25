@@ -20,10 +20,14 @@
 - **PH-DB-3 gap:** `liorm/embed_engine.py` wires `execute()` to `lidb_embed` SQLite when engine ready.
 >>>>>>> 0b1bdde (docs(liq): publish measured token efficiency audit)
 - **PH-DB-3 changefeed:** native WAL `subscribe` + C poll/Unix API (`engine/changefeed.*`, `docs/changefeed.md`).
+<<<<<<< HEAD
 =======
 - **PH-DB-0:** `docs/learned-from.md` — vertical survey (OLTP, analytics, realtime, graph, vector, ORM security) with Keep/Reject/Adapt; SQLite not a production backend.
 - **PH-DB-3 gap:** `liorm/embed_engine.py` wires `execute()` to `lidb_embed` SQLite when engine ready.
 >>>>>>> 23ef021 (docs(PH-DB-0): add learned-from vertical survey)
+=======
+- **PH-DB-3.1:** sqlite cutover — archive `migrations/*_embedded.sql`, `scripts/check_no_sqlite.sh`, CI native-only ([2026-05-25-ph-db-3-1-sqlite-cutover.md](docs/release-notes/2026-05-25-ph-db-3-1-sqlite-cutover.md)).
+>>>>>>> eed6ee5 (feat(PH-DB-3.1): sqlite cutover gate on native embed stack)
 
 ### Added
 
