@@ -8,7 +8,7 @@ Li-native Postgres-shaped database engine (library + embedded server). Part of t
 ./scripts/smoke.sh
 ```
 
-Requires `cmake` and `python3` only (native `lidb_embed`; sqlite3 smoke removed PH-DB-N1). Not production Postgres.
+Requires `cmake`, `python3`. **`sqlite3` is PH-DB-1 smoke only** — removed at **PH-DB-3.1** ([`docs/architecture-native-li.md`](docs/architecture-native-li.md)). Not production Postgres.
 
 ## Benchmark harnesses (WP-N4)
 
