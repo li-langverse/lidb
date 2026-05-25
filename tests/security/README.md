@@ -30,3 +30,7 @@ When liorm is implemented, maintain **≥80% line coverage** on:
 
 - **lidb** CI: run on every PR touching `liorm/`, `liq/`, or `tests/security/`.
 - **lic** optional mirror: `li-tests/security/db-orm/` may symlink or invoke this directory once lidb is vendored.
+
+## PH-DB-5 (RLS)
+
+RLS stubs: `rls-*.test.sh` — skipped until `LIDB_ENGINE_READY=1`.

@@ -13,5 +13,8 @@
 - **PH-DB-2**: `scripts/security_probe.py`, `scripts/run_tests.sh` (venv pytest + CVE harness).
 - **PH-DB-2**: `tests/test_*.py` (parser, compiler, execute, capabilities).
 - **PH-DB-2**: `tests/security/run_all.sh` sets `LIDB_ENGINE_READY=1` when stubs present; 4 CVE scripts PASS.
+- **PH-DB-5**: `migrations/002_rls_registry.sql` — multi-tenant RLS, `registry_auth` JWT helpers (Supabase-compatible GUCs), `publisher_members`.
+- **PH-DB-5**: `docs/auth-rls.md` — policy matrix, lis `set_jwt_claims`, Supabase/PostgREST notes.
+- **PH-DB-5**: `tests/security/rls-*.test.sh` stubs (tenant isolation, JWT GUC, service_role bypass).
 - **PH-DB-1**: Greenfield scaffold — migrations, footprint/SQL subset docs, storage smoke, toolchain manifest.
 - **PH-DB-2**: `liorm/` and `liq/` API skeletons and README sketches (prior PR).

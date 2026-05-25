@@ -30,6 +30,9 @@ Requires `cmake`, `sqlite3`, `python3`. Not production Postgres.
 
 - [Footprint targets](docs/footprint.md)
 - [Postgres subset v1](docs/pg-subset-v1.md)
+- [liorm API sketch](liorm/README.md)
+- [liq AST examples](liq/README.md)
+- [liq specification](docs/liq-spec.md)
 - [Auth and RLS](docs/auth-rls.md)
 - [Security regression stubs](tests/security/README.md)
 
