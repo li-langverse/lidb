@@ -1,9 +1,16 @@
-# PH-DB: native heap + WAL + changefeed C API (no sqlite smoke).
+# PH-DB: native heap + WAL + changefeed C API + Li SQL (no sqlite).
 cmake_minimum_required(VERSION 3.20)
 project(lidb LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_library(lidb_sql
+  sql/parser/lexer.cpp
+  sql/parser/registry_parse.cpp
+)
+target_include_directories(lidb_sql PUBLIC sql/include)
+target_compile_features(lidb_sql PUBLIC cxx_std_20)
 
 add_library(lidb_engine
   engine/buffer_pool.cpp
@@ -16,6 +23,7 @@ add_library(lidb_engine
 )
 target_include_directories(lidb_engine PUBLIC engine/include)
 target_compile_features(lidb_engine PUBLIC cxx_std_20)
+target_link_libraries(lidb_engine PUBLIC lidb_sql)
 
 add_library(lidb_changefeed_c SHARED engine/changefeed_c.cpp)
 target_link_libraries(lidb_changefeed_c PUBLIC lidb_engine)
