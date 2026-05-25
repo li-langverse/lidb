@@ -1,0 +1,18 @@
+[package]
+name = "lidb"
+version = "0.0.1"
+edition = "2026"
+license = "Apache-2.0 OR MIT"
+description = "Li-native Postgres-shaped database engine (library + embedded server)"
+
+[package.metadata.li]
+github_repo = "lidb"
+import_name = "lidb"
+min_lic = "0.1.0"
+maintainer = "li-langverse"
+pkg_id = "PKG-lidb"
+
+[package.repository]
+url = "https://github.com/li-langverse/lidb"
+documentation = "https://github.com/li-langverse/lidb/tree/main/docs"
+changelog = "https://github.com/li-langverse/lidb/blob/main/CHANGELOG.md"

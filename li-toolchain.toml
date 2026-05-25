@@ -1,0 +1,9 @@
+# Pin lic / lit for reproducible CI (registry + storage gates).
+[toolchain]
+lic_repo = "https://github.com/li-langverse/lic"
+lic_version = "0.1.0"
+lit_repo = "https://github.com/li-langverse/lit"
+lit_version = "0.1.0"
+
+[coverage]
+min_coverage = 80
