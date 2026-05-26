@@ -158,8 +158,8 @@ def seed_test_fixtures() -> None:
 
     if count("publishers") == 0:
         session.exec_parameterized(
-            "INSERT INTO publishers (id, name, public_key, display_name) VALUES (?, ?, ?, ?)",
-            [pub, "pytest-publisher", "00" * 32, "Pytest Publisher"],
+            "INSERT INTO publishers (id, name, public_key) VALUES (?, ?, ?)",
+            [pub, "pytest-publisher", "00" * 32],
         )
     if count("agent_runs") == 0:
         session.exec_parameterized(
