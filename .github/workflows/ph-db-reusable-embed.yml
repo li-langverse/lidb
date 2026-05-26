@@ -1,0 +1,64 @@
+# WP-G: reusable embed build + pytest subset for cross-repo PH-DB consumers.
+name: PH-DB embed build (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      run_smoke:
+        description: Run native smoke before pytest subset
+        type: boolean
+        default: true
+      upload_artifact:
+        description: Upload lidb_embed binary artifact
+        type: boolean
+        default: true
+    outputs:
+      embed_path:
+        description: Path to lidb_embed binary
+        value: ${{ jobs.embed-build.outputs.embed_path }}
+      build_dir:
+        description: CMake build directory
+        value: ${{ jobs.embed-build.outputs.build_dir }}
+
+jobs:
+  embed-build:
+    runs-on: ubuntu-24.04
+    outputs:
+      embed_path: ${{ steps.paths.outputs.embed_path }}
+      build_dir: ${{ steps.paths.outputs.build_dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cmake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: PH-DB gate (smoke + pytest subset)
+        run: |
+          chmod +x scripts/*.sh
+          if [[ "${{ inputs.run_smoke }}" == "true" ]]; then
+            bash scripts/ci_ph_db_gate.sh
+          else
+            bash scripts/ci_ph_db_gate.sh --pytest-only
+          fi
+
+      - name: Record embed paths
+        id: paths
+        run: |
+          BUILD_DIR="${LIDB_BUILD_DIR:-$PWD/build/smoke}"
+          EMBED="$BUILD_DIR/lidb_embed"
+          test -x "$EMBED"
+          echo "embed_path=$EMBED" >> "$GITHUB_OUTPUT"
+          echo "build_dir=$BUILD_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload lidb_embed artifact
+        if: inputs.upload_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lidb_embed-${{ github.run_id }}
+          path: build/smoke/lidb_embed
+          if-no-files-found: error
+          retention-days: 7

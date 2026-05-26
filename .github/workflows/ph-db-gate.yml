@@ -1,0 +1,20 @@
+# WP-G: PR gate — smoke, key pytest subset, lidb_embed artifact for downstream repos.
+name: PH-DB gate
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: ph-db-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ph-db-gate:
+    uses: ./.github/workflows/ph-db-reusable-embed.yml
+    with:
+      run_smoke: true
+      upload_artifact: true
