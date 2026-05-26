@@ -7,6 +7,28 @@ import pytest
 from liq.compiler import compile
 from liorm.execute import clear_plans, execute, register_plan
 
+_PUB_ID = "00000000-0000-4000-8000-000000000010"
+_PKG_ID = "00000000-0000-4000-8000-000000000020"
+
+
+def _doc_params(source: str, param_schema: dict[str, str]) -> dict[str, str]:
+    """Bind doc-example params to native catalog seed rows."""
+    if "update publishers" in source:
+        return {
+            "name": "Updated Publisher",
+            "id": _PUB_ID,
+        }
+    if "read publishers" in source and "name" in param_schema:
+        return {"name": "pytest-publisher"}
+    defaults = {
+        "status": "running",
+        "pub": _PUB_ID,
+        "pkg": _PKG_ID,
+        "ver": "0.0.2-doc",
+        "sha": "sha256:doc-example",
+    }
+    return {k: defaults.get(k, f"v-{k}") for k in param_schema}
+
 # liq/README.md — AST-oriented examples
 LIQ_README_EXAMPLES = [
     "read agent_runs limit 20",
@@ -40,5 +62,5 @@ def test_liq_doc_example_compiles_and_executes(source: str) -> None:
         sql=plan.sql,
         param_schema=plan.param_schema,
     )
-    params = {k: f"v-{k}" for k in plan.param_schema}
+    params = _doc_params(source, plan.param_schema)
     assert execute(pid, params).rows

@@ -8,6 +8,25 @@
 namespace lidb {
 namespace {
 
+std::string json_escape(std::string_view s) {
+  std::string out;
+  out.reserve(s.size() + 8);
+  for (char c : s) {
+    if (c == '"' || c == '\\') out.push_back('\\');
+    if (c == '\n') {
+      out += "\\n";
+      continue;
+    }
+    if (c == '\r') {
+      out += "\\r";
+      continue;
+    }
+    if (static_cast<unsigned char>(c) < 0x20) continue;
+    out.push_back(c);
+  }
+  return out;
+}
+
 std::string extract_insert_table(std::string_view sql) {
   auto lq = std::string(sql);
   auto pos = lq.find("INTO ");
@@ -90,7 +109,7 @@ std::string EmbeddedDatabase::exec_result_json(const NativeExecResult& result) {
     for (const auto& [k, v] : row.cols) {
       if (!first_col) out << ',';
       first_col = false;
-      out << '"' << k << "\":\"" << v << '"';
+      out << '"' << k << "\":\"" << json_escape(v) << '"';
     }
     out << '}';
   }

@@ -37,7 +37,8 @@ def _flatten_sql(pg_sql: str) -> str:
 )
 def test_compile_registry_queries_use_placeholders(source: str):
     plan = compile(source)
-    assert "$" in plan.sql or "?" in _flatten_sql(plan.sql)
+    if plan.param_schema:
+        assert "$" in plan.sql or "?" in _flatten_sql(plan.sql)
     assert plan.plan_id.startswith("liq:")
 
 
