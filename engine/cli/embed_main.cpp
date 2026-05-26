@@ -47,7 +47,9 @@ int main(int argc, char** argv) {
     std::string sql_lower = sql_l;
     for (auto& c : sql_lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     const bool is_select = sql_lower.rfind("select", 0) == 0;
-    if (result.rows.empty() && result.affected == 0 && !is_select) {
+    const bool is_delete = sql_lower.rfind("delete", 0) == 0;
+    const bool is_update = sql_lower.rfind("update", 0) == 0;
+    if (result.rows.empty() && result.affected == 0 && !is_select && !is_delete && !is_update) {
       std::cerr << "exec failed\n";
       return 1;
     }

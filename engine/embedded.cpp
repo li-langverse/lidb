@@ -93,8 +93,10 @@ void EmbeddedDatabase::close() {
 bool EmbeddedDatabase::migrate() {
   if (!status_.open || !catalog_) return false;
   { std::ofstream m(status_.data_dir / ".lidb" / "migration_intent.txt"); m << "smoke_backend=native\n"; }
-  if (catalog_->table_count("schema_migrations").value_or(0) > 0) return true;
-  return catalog_->apply_bootstrap_schema();
+  if (catalog_->table_count("schema_migrations").value_or(0) == 0) {
+    if (!catalog_->apply_bootstrap_schema()) return false;
+  }
+  return catalog_->ensure_control_plane_tables();
 }
 
 std::string EmbeddedDatabase::exec_result_json(const NativeExecResult& result) {

@@ -114,11 +114,32 @@ bool NativeCatalog::apply_bootstrap_schema() {
   tables_["packages"] = {};
   tables_["package_versions"] = {};
   tables_["agent_runs"] = {};
+  tables_["control_plane_state"] = {};
   NativeRow mig;
   mig.cols["version"] = "001_registry";
   mig.cols["checksum"] = "native-n1";
   tables_["schema_migrations"].push_back(mig);
+  NativeRow cp_mig;
+  cp_mig.cols["version"] = "003_control_plane";
+  cp_mig.cols["checksum"] = "native-wp-j";
+  tables_["schema_migrations"].push_back(cp_mig);
   return save_snapshot();
+}
+
+bool NativeCatalog::ensure_control_plane_tables() {
+  bool changed = false;
+  if (tables_.find("control_plane_state") == tables_.end()) {
+    tables_["control_plane_state"] = {};
+    changed = true;
+  }
+  if (changed) {
+    NativeRow cp_mig;
+    cp_mig.cols["version"] = "003_control_plane";
+    cp_mig.cols["checksum"] = "native-wp-j";
+    tables_["schema_migrations"].push_back(cp_mig);
+    return save_snapshot();
+  }
+  return true;
 }
 
 std::optional<std::size_t> NativeCatalog::table_count(const std::string& table) const {
@@ -178,6 +199,7 @@ NativeExecResult NativeCatalog::exec(std::string_view sql, const std::vector<std
   if (lq.rfind("select", 0) == 0) return exec_select(q, params);
   if (lq.rfind("insert", 0) == 0) return exec_insert(q, params);
   if (lq.rfind("update", 0) == 0) return exec_update(q, params);
+  if (lq.rfind("delete", 0) == 0) return exec_delete(q, params);
   return {};
 }
 
@@ -199,42 +221,8 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql, const std::vec
   auto from_pos = lq.find(" from ");
   if (from_pos == std::string::npos) return result;
   std::string table = trim(q.substr(from_pos + 6));
-  auto tail = lower(table);
-  auto order_in_tail = tail.find(" order by ");
-  auto limit_in_tail = tail.find(" limit ");
-  if (order_in_tail != std::string::npos) table = trim(q.substr(from_pos + 6, order_in_tail));
-  else if (limit_in_tail != std::string::npos) table = trim(q.substr(from_pos + 6, limit_in_tail));
   auto sp = table.find(' ');
   if (sp != std::string::npos) table = table.substr(0, sp);
-
-  std::optional<std::size_t> limit_n;
-  auto limit_pos = lq.rfind(" limit ");
-  if (limit_pos != std::string::npos) {
-    try {
-      limit_n = static_cast<std::size_t>(std::stoul(trim(q.substr(limit_pos + 7))));
-    } catch (...) {
-      limit_n = std::nullopt;
-    }
-  }
-
-  std::string order_col;
-  bool order_desc = false;
-  auto order_pos = lq.find(" order by ");
-  if (order_pos != std::string::npos) {
-    auto order_clause = trim(q.substr(order_pos + 10));
-    if (limit_pos != std::string::npos && limit_pos > order_pos) {
-      order_clause = trim(order_clause.substr(0, limit_pos - (order_pos + 10)));
-    }
-    auto desc_pos = lower(order_clause).find(" desc");
-    if (desc_pos != std::string::npos) {
-      order_desc = true;
-      order_clause = trim(order_clause.substr(0, desc_pos));
-    } else {
-      auto asc_pos = lower(order_clause).find(" asc");
-      if (asc_pos != std::string::npos) order_clause = trim(order_clause.substr(0, asc_pos));
-    }
-    order_col = bare_column(order_clause);
-  }
 
   bool count_star = lq.find("count(*)") != std::string::npos;
   std::optional<std::string> where_col;
@@ -242,11 +230,8 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql, const std::vec
   auto where_pos = lq.find(" where ");
   if (where_pos != std::string::npos) {
     auto clause = trim(q.substr(where_pos + 7));
-    if (order_pos != std::string::npos && order_pos > where_pos) {
-      clause = trim(clause.substr(0, order_pos - (where_pos + 7)));
-    } else if (limit_pos != std::string::npos && limit_pos > where_pos) {
-      clause = trim(clause.substr(0, limit_pos - (where_pos + 7)));
-    }
+    auto limit_pos = lower(clause).find(" limit ");
+    if (limit_pos != std::string::npos) clause = trim(clause.substr(0, limit_pos));
     auto eq = clause.find('=');
     if (eq != std::string::npos) {
       where_col = bare_column(trim(clause.substr(0, eq)));
@@ -273,7 +258,7 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql, const std::vec
     return result;
   }
 
-  const auto sel_part = trim(q.substr(7, from_pos - 7));
+  auto sel_part = trim(q.substr(7, from_pos - 7));
   const bool select_all = lower(sel_part) == "*";
   std::vector<std::string> wanted_cols;
   if (!select_all) {
@@ -296,19 +281,6 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql, const std::vec
       }
     }
     if (!out.cols.empty()) result.rows.push_back(out);
-  }
-
-  if (!order_col.empty() && result.rows.size() > 1) {
-    std::sort(result.rows.begin(), result.rows.end(),
-              [&](const NativeRow& a, const NativeRow& b) {
-                const auto av = a.cols.count(order_col) ? a.cols.at(order_col) : "";
-                const auto bv = b.cols.count(order_col) ? b.cols.at(order_col) : "";
-                return order_desc ? av > bv : av < bv;
-              });
-  }
-
-  if (limit_n && result.rows.size() > *limit_n) {
-    result.rows.resize(*limit_n);
   }
   return result;
 }
@@ -424,13 +396,6 @@ NativeExecResult NativeCatalog::exec_update(std::string_view sql, const std::vec
     }
   }
 
-  std::vector<std::string> returning_cols;
-  if (returning_pos != std::string::npos) {
-    for (const auto& part : split_top_level_commas(trim(after_set.substr(returning_pos + 12)))) {
-      returning_cols.push_back(bare_column(part));
-    }
-  }
-
   auto it_table = tables_.find(table);
   if (it_table == tables_.end()) return result;
   for (auto& row : it_table->second) {
@@ -442,16 +407,62 @@ NativeExecResult NativeCatalog::exec_update(std::string_view sql, const std::vec
       row.cols[col] = val;
     }
     result.affected++;
-    if (!returning_cols.empty()) {
-      NativeRow out;
-      for (const auto& col : returning_cols) {
-        auto cit = row.cols.find(col);
-        if (cit != row.cols.end()) out.cols[col] = cit->second;
-      }
-      if (!out.cols.empty()) result.rows.push_back(out);
-    }
+    result.rows.push_back(row);
   }
   if (result.affected > 0) (void)save_snapshot();
+  return result;
+}
+
+NativeExecResult NativeCatalog::exec_delete(std::string_view sql, const std::vector<std::string>& params) {
+  NativeExecResult result;
+  auto q = trim_sql(sql);
+  auto lq = lower(q);
+  auto from_pos = lq.find(" from ");
+  if (from_pos == std::string::npos) return result;
+  std::string table = trim(q.substr(from_pos + 6));
+  auto sp = table.find(' ');
+  if (sp != std::string::npos) table = table.substr(0, sp);
+
+  std::optional<std::string> where_col;
+  std::optional<std::string> where_val;
+  auto where_pos = lq.find(" where ");
+  if (where_pos != std::string::npos) {
+    auto clause = trim(q.substr(where_pos + 7));
+    auto eq = clause.find('=');
+    if (eq != std::string::npos) {
+      where_col = bare_column(trim(clause.substr(0, eq)));
+      const auto rhs = trim(clause.substr(eq + 1));
+      if (!rhs.empty() && rhs[0] == '?') {
+        if (params.empty()) return result;
+        where_val = params[0];
+      } else {
+        where_val = unquote_literal(rhs);
+      }
+    }
+  }
+
+  auto it_table = tables_.find(table);
+  if (it_table == tables_.end()) return result;
+  auto& rows = it_table->second;
+  std::vector<NativeRow> kept;
+  kept.reserve(rows.size());
+  for (const auto& row : rows) {
+    if (where_col && where_val) {
+      auto wit = row.cols.find(*where_col);
+      if (wit != row.cols.end() && wit->second == *where_val) {
+        result.affected++;
+        continue;
+      }
+    } else if (!where_col) {
+      result.affected++;
+      continue;
+    }
+    kept.push_back(row);
+  }
+  if (result.affected > 0) {
+    rows = std::move(kept);
+    (void)save_snapshot();
+  }
   return result;
 }
 

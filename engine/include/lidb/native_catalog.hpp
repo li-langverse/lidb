@@ -23,6 +23,8 @@ class NativeCatalog {
   explicit NativeCatalog(std::filesystem::path snapshot_path);
   bool load_or_create();
   bool apply_bootstrap_schema();
+  /** Idempotent WP-J: add control-plane tables missing from older bootstraps. */
+  bool ensure_control_plane_tables();
   std::optional<std::size_t> table_count(const std::string& table) const;
   NativeExecResult exec(std::string_view sql, const std::vector<std::string>& params = {});
 
@@ -36,6 +38,7 @@ class NativeCatalog {
   NativeExecResult exec_select(std::string_view sql, const std::vector<std::string>& params);
   NativeExecResult exec_insert(std::string_view sql, const std::vector<std::string>& params);
   NativeExecResult exec_update(std::string_view sql, const std::vector<std::string>& params);
+  NativeExecResult exec_delete(std::string_view sql, const std::vector<std::string>& params);
   static std::string bare_column(std::string col);
 
   std::filesystem::path snapshot_path_;
