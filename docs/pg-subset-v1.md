@@ -6,11 +6,11 @@
 
 | Surface | PH-DB-1 (current) | Target (native N2–N4) |
 |---------|-------------------|------------------------|
-| Embedded open/close | **Stub** | `lidb_embed` + in-process `lis` embed |
-| WAL | **Append-only stub** | Replay + checkpoint (N2) |
+| Embedded open/close | **Native** (`lidb_embed`, `lis db` in-process) | Stable API + lifecycle hooks |
+| WAL | **Append-only native** (smoke LSN; replay/checkpoint partial) | Full replay + checkpoint (N2) |
 | Buffer pool | **Pin/unpin stub** | 8 KiB pages + eviction (N2) |
-| SQL execution | **Deprecated smoke** → **Native** (N3) | C++/Li executor over `001_registry.sql` |
-| Target DDL | **Documented** | `001_registry.sql` (Postgres-shaped) |
+| SQL execution | **Native** (parameterized DML/SELECT on registry catalog) | Broader `pg-subset-v1` surface + JOIN |
+| Target DDL | **Applied** via `001_registry.sql` + migrate | Registry v2 / PH-DB-4 extensions |
 
 ## SQLite smoke — REMOVED
 
