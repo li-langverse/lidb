@@ -1,0 +1,30 @@
+# Dev/CI embed image — builds lidb_embed + Python liorm/liq tree (WP-H).
+# NOT production Postgres; no lis supervisor. Use lis/docker/Dockerfile.supervisor for compose.
+FROM debian:bookworm-slim AS builder
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends cmake g++ make \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+RUN rm -rf build
+
+RUN cmake -S . -B build/smoke -DCMAKE_BUILD_TYPE=Release \
+  && cmake --build build/smoke --target lidb_embed -j"$(nproc)"
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends libstdc++6 python3 \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /src/build/smoke/lidb_embed /usr/local/bin/lidb_embed
+COPY --from=builder /src/migrations /opt/lidb/migrations
+COPY --from=builder /src/liorm /opt/lidb/liorm
+COPY --from=builder /src/liq /opt/lidb/liq
+
+ENV LIDB_EMBED=/usr/local/bin/lidb_embed \
+    LIDB_REPO=/opt/lidb
+
+WORKDIR /opt/lidb

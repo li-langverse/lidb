@@ -10,6 +10,34 @@ Li-native Postgres-shaped database engine (library + embedded server). Part of t
 
 Requires `cmake` and `python3` only (native `lidb_embed`; sqlite3 removed PH-DB-3.1). Not production Postgres.
 
+## Container (WP-H)
+
+Standalone embed image (no **lis** supervisor):
+
+```bash
+docker build -f docker/Dockerfile.embed -t lidb-embed:local .
+```
+
+For `lis db start` + compose dev stack, use **lis** [`docker-compose.ph-db.yml`](https://github.com/li-langverse/lis/blob/main/docker-compose.ph-db.yml) (multi-stage bake of this repo).
+
+## CI / cross-repo gate (WP-G)
+
+```bash
+./scripts/ci_ph_db_gate.sh   # smoke + key pytest subset
+```
+
+See [docs/ci-ph-db-gate.md](docs/ci-ph-db-gate.md) for `LIDB_CI_REF`, `LIDB_REPO`, and workflow triggers.
+
+## Container (WP-H)
+
+Standalone embed image (no **lis** supervisor):
+
+```bash
+docker build -f docker/Dockerfile.embed -t lidb-embed:local .
+```
+
+For `lis db start` + compose dev stack, use **lis** [`docker-compose.ph-db.yml`](https://github.com/li-langverse/lis/blob/main/docker-compose.ph-db.yml) (multi-stage bake of this repo).
+
 ## Benchmark harnesses (WP-N4)
 
 When `BENCH_DB_*_RUN_HARNESS=1`, **benchmarks** invokes scripts under `scripts/bench/`:
