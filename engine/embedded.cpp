@@ -29,6 +29,8 @@ std::string EmbeddedDatabase::flatten_catalog_sql(std::string_view sql) {
   out = std::regex_replace(out, triple, "$3");
   out = std::regex_replace(out, dbl, "$2");
   out = std::regex_replace(out, param, "?");
+  static const std::regex quoted(R"x("([^"]+)")x");
+  out = std::regex_replace(out, quoted, "$1");
   while (!out.empty() && std::isspace(static_cast<unsigned char>(out.back()))) out.pop_back();
   if (!out.empty() && out.back() == ';') out.pop_back();
   return out;
