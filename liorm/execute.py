@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from liorm.errors import ParameterMismatch, UnknownPlan
+from liorm.errors import OrmError, ParameterMismatch, UnknownPlan
 
 _PLANS: dict[str, _RegisteredPlan] = {}
 
