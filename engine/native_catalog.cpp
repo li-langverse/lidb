@@ -114,6 +114,9 @@ bool NativeCatalog::apply_bootstrap_schema() {
   tables_["packages"] = {};
   tables_["package_versions"] = {};
   tables_["agent_runs"] = {};
+  tables_["control_plane_state"] = {};
+  tables_["control_plane_reports"] = {};
+  tables_["agent_handoffs"] = {};
   NativeRow mig;
   mig.cols["version"] = "001_registry";
   mig.cols["checksum"] = "native-n1";
@@ -167,6 +170,7 @@ NativeExecResult NativeCatalog::exec(std::string_view sql, const std::vector<std
   auto lq = lower(q);
   if (lq.rfind("select", 0) == 0) return exec_select(q);
   if (lq.rfind("insert", 0) == 0) return exec_insert(q, params);
+  if (lq.rfind("delete", 0) == 0) return exec_delete(q, params);
   return {};
 }
 
@@ -233,6 +237,56 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql) {
     }
     if (!out.cols.empty()) result.rows.push_back(out);
   }
+  return result;
+}
+
+
+NativeExecResult NativeCatalog::exec_delete(std::string_view sql, const std::vector<std::string>& params) {
+  NativeExecResult result;
+  auto q = trim_sql(sql);
+  auto lq = lower(q);
+  auto from_pos = lq.find(" from ");
+  if (from_pos == std::string::npos) return result;
+  std::string table = trim(q.substr(from_pos + 6));
+  auto sp = table.find(' ');
+  if (sp != std::string::npos) table = table.substr(0, sp);
+
+  std::optional<std::string> where_col;
+  std::optional<std::string> where_val;
+  auto where_pos = lq.find(" where ");
+  if (where_pos != std::string::npos) {
+    auto clause = trim(q.substr(where_pos + 7));
+    auto eq = clause.find('=');
+    if (eq != std::string::npos) {
+      where_col = trim(clause.substr(0, eq));
+      auto rhs = trim(clause.substr(eq + 1));
+      if (rhs == "?") {
+        if (params.empty()) return result;
+        where_val = params[0];
+      } else {
+        where_val = unquote_literal(rhs);
+      }
+    }
+  }
+
+  auto& rows = tables_[table];
+  std::vector<NativeRow> kept;
+  std::size_t removed = 0;
+  for (const auto& row : rows) {
+    bool match = true;
+    if (where_col && where_val) {
+      auto it = row.cols.find(*where_col);
+      match = it != row.cols.end() && it->second == *where_val;
+    }
+    if (match) {
+      removed++;
+      continue;
+    }
+    kept.push_back(row);
+  }
+  rows = std::move(kept);
+  if (!save_snapshot()) return result;
+  result.affected = removed;
   return result;
 }
 

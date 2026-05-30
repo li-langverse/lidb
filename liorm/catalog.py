@@ -53,6 +53,26 @@ _CONTROL_PLANE: dict[str, frozenset[str] | None] = {
             "output",
         }
     ),
+    "public.agent_handoffs": frozenset(
+        {
+            "handoff_id",
+            "research_goal_id",
+            "from_agent",
+            "to_agents",
+            "status",
+            "domains",
+            "north_star_fit",
+            "package_placement",
+            "work",
+            "research_session_id",
+            "briefing_hash",
+            "source_run_id",
+            "created_at",
+            "updated_at",
+            "claimed_at",
+            "completed_at",
+        }
+    ),
     "public.agent_run_events": frozenset({"run_id", "seq", "event_type", "payload"}),
     "public.control_plane_state": frozenset({"id", "payload", "updated_at"}),
     "public.control_plane_reports": frozenset(

@@ -1,6 +1,6 @@
 """Embedded engine bridge — lidb_embed native only (sqlite3 removed)."""
 from __future__ import annotations
-import json, os, re, shutil, subprocess, tempfile
+import json, os, re, shutil, subprocess, tempfile, threading
 from pathlib import Path
 from typing import Any
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -38,17 +38,19 @@ class EmbeddedSession:
         return [dict(r) for r in json.loads(proc.stdout or "{}").get("rows",[])]
     def close(self): pass
 _SESSION=None; _SESSION_DIR=None; _READY=None
+_SESSION_LOCK=threading.Lock()
 def ensure_session():
     global _SESSION,_READY,_SESSION_DIR
-    if _READY is False: return None
-    if _SESSION: return _SESSION
-    if os.environ.get("LIDB_DATA_DIR"): data=Path(os.environ["LIDB_DATA_DIR"])
-    else:
-        if _SESSION_DIR is None: _SESSION_DIR=tempfile.TemporaryDirectory(prefix="lidb-liorm-")
-        data=Path(_SESSION_DIR.name)
-    s=EmbeddedSession(data)
-    if not s.open_and_migrate(): _READY=False; _SESSION=None; return None
-    _SESSION=s; _READY=True; return s
+    with _SESSION_LOCK:
+        if _READY is False: return None
+        if _SESSION: return _SESSION
+        if os.environ.get("LIDB_DATA_DIR"): data=Path(os.environ["LIDB_DATA_DIR"])
+        else:
+            if _SESSION_DIR is None: _SESSION_DIR=tempfile.TemporaryDirectory(prefix="lidb-liorm-")
+            data=Path(_SESSION_DIR.name)
+        s=EmbeddedSession(data)
+        if not s.open_and_migrate(): _READY=False; _SESSION=None; return None
+        _SESSION=s; _READY=True; return s
 def engine_ready(): return ensure_session() is not None
 def probe_engine_ready():
     s=ensure_session()
@@ -56,9 +58,10 @@ def probe_engine_ready():
     try: return str(s.exec_parameterized("SELECT 1 AS ok",[])[0].get("ok"))=="1"
     except Exception: return False
 def execute_sql(sql, params):
-    s=ensure_session()
-    if not s: raise RuntimeError("embedded engine unavailable (native lidb_embed required; sqlite3 fallback removed)")
-    return s.exec_parameterized(sql, params)
+    with _SESSION_LOCK:
+        s=ensure_session()
+        if not s: raise RuntimeError("embedded engine unavailable (native lidb_embed required; sqlite3 fallback removed)")
+        return s.exec_parameterized(sql, params)
 def seed_test_fixtures():
     s=ensure_session()
     if not s: return
