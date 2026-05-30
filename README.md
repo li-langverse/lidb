@@ -1,5 +1,7 @@
 # lidb
 
+*Li-native Postgres-shaped DB for scientific computing, HPC catalogs, and AI agents — PH-DB (liq, liorm).*
+
 Li-native Postgres-shaped database engine (library + embedded server). Part of the **PH-DB** program for registry v2 and the lean **lidb + lis** bundle.
 
 ## Smoke (PH-DB-1)
