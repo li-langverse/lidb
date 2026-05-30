@@ -161,6 +161,7 @@ def run_compare(*, profile: str, warmup: int, measure: int) -> dict:
 
     rows: list[dict] = []
     pub_n = {"n": 1}
+    pg_pub_n = {"n": 1000}
 
     def lidb_publish() -> None:
         pub_n["n"] += 1
@@ -197,7 +198,8 @@ def run_compare(*, profile: str, warmup: int, measure: int) -> dict:
         if pg_cur:
             # Postgres timing uses equivalent SQL
             def pg_publish() -> None:
-                n = pub_n["n"] + 1
+                pg_pub_n["n"] += 1
+                n = pg_pub_n["n"]
                 pg_cur.execute(
                     "INSERT INTO package_versions (package_id, version, tree_digest, coverage_pct) "
                     "VALUES ((SELECT id FROM packages WHERE name=%s), %s, %s, %s)",
