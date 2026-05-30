@@ -1,3 +1,4 @@
+#include <cctype>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -42,7 +43,14 @@ int main(int argc, char** argv) {
     std::vector<std::string> params;
     if (cmd == "exec-json") params = read_params_json(std::cin);
     const auto result = db.exec_parameterized(argv[3], params);
-    if (result.rows.empty() && result.affected == 0) { std::cerr << "exec failed\n"; return 1; }
+    std::string sql_lower;
+    
+    for (const char* p = argv[3]; *p; ++p) sql_lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(*p))));
+    const bool is_select = sql_lower.rfind("select", 0) == 0;
+    if (!is_select && result.rows.empty() && result.affected == 0) {
+      std::cerr << "exec failed\n";
+      return 1;
+    }
     if (cmd == "exec-json") {
       std::cout << lidb::EmbeddedDatabase::exec_result_json(result) << "\n"; return 0;
     }
