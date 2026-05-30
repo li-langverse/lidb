@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **tier_db CSV smoke bench** (`scripts/bench/tier_db_csv.sh`) — [2026-05-25-tier-db-measured-csv.md](docs/release-notes/2026-05-25-tier-db-measured-csv.md).
+
 ### Changed
 
 - **WP-B2:** Agent-kit **1.3.3** — `.cursor/` rules/skills/hooks, `scripts/sync-agent-kit.sh` ([2026-05-25-agent-kit-1.3.3-wp-b2.md](docs/release-notes/2026-05-25-agent-kit-1.3.3-wp-b2.md)).
@@ -17,6 +21,7 @@
 - **PH-DB-3 gap:** ~~`liorm/embed_engine.py` wires `execute()` to `lidb_embed` SQLite~~ superseded by WP-N2 native embed.
 - **PH-DB-3 changefeed:** native WAL `subscribe` + C poll/Unix API (`engine/changefeed.*`, `docs/changefeed.md`).
 - **PH-DB-3.1:** sqlite cutover — archive `migrations/*_embedded.sql`, `scripts/check_no_sqlite.sh`, CI native-only ([2026-05-25-ph-db-3-1-sqlite-cutover.md](docs/release-notes/2026-05-25-ph-db-3-1-sqlite-cutover.md)).
+- GitHub repo description and README tagline for org hygiene (WP-A4); canonical string in `.github/repo-description`.
 
 ### Added
 
@@ -34,3 +39,7 @@
 - **PH-DB-5**: `tests/security/rls-*.test.sh` stubs (tenant isolation, JWT GUC, service_role bypass).
 - **PH-DB-1**: Greenfield scaffold — migrations, footprint/SQL subset docs, storage smoke, toolchain manifest.
 - **PH-DB-2**: `liorm/` and `liq/` API skeletons and README sketches (prior PR).
+
+### Added
+
+- **tier_db CSV smoke bench** (`scripts/bench/tier_db_csv.sh`) for benchmarks catalog ingest — [2026-05-25-tier-db-measured-csv.md](docs/release-notes/2026-05-25-tier-db-measured-csv.md).

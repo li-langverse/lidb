@@ -8,8 +8,6 @@ import sys
 import threading
 from typing import Callable
 
-os.environ.setdefault("LIORM_EXECUTE_STUB", "1")
-
 from liorm.audit import AppendOnlyAuditLog, record_capability_denial, redact_query_log
 from liorm.capabilities import Profile, RawSqlCapability, assert_capability
 from liorm.errors import CapabilityDenied
@@ -29,6 +27,11 @@ def _probe_append_only_chain() -> bool:
 
 
 def _probe_parallel_race() -> bool:
+    from liorm import embed_engine
+
+    if not embed_engine.engine_ready():
+        return False
+    embed_engine.seed_test_fixtures()
     clear_plans()
     plan = compile("read agent_runs limit 3")
     pid = register_plan(
