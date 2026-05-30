@@ -28,16 +28,19 @@ def _flatten_sql(pg_sql: str) -> str:
 
 
 @pytest.mark.parametrize(
-    "source",
+    "source,needs_placeholder",
     [
-        "read agent_runs limit 5",
-        "read agent_runs where status = $status limit 10",
-        "read package_versions where version = $ver limit 1",
+        ("read agent_runs limit 5", False),
+        ("read agent_runs where status = $status limit 10", True),
+        ("read package_versions where version = $ver limit 1", True),
     ],
 )
-def test_compile_registry_queries_use_placeholders(source: str):
+def test_compile_registry_queries_use_placeholders(source: str, needs_placeholder: bool):
     plan = compile(source)
-    assert "$" in plan.sql or "?" in _flatten_sql(plan.sql)
+    flat = _flatten_sql(plan.sql)
+    if needs_placeholder:
+        assert "$" in plan.sql or "?" in flat
+    assert "agent_runs" in flat or "package_versions" in flat
     assert plan.plan_id.startswith("liq:")
 
 

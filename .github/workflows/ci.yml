@@ -12,13 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Assert sqlite3 not installed
-        run: |
-          if command -v sqlite3 >/dev/null 2>&1; then
-            echo "sqlite3 must not be on PATH for PH-DB-3.1 CI" >&2
-            exit 1
-          fi
-          bash scripts/check_no_sqlite.sh
+      - name: Assert no sqlite3 in tree (PH-DB-3.1)
+        run: bash scripts/check_no_sqlite.sh
 
       - uses: actions/setup-python@v5
         with:

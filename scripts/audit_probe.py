@@ -8,8 +8,6 @@ import sys
 import threading
 from typing import Callable
 
-os.environ.setdefault("LIORM_EXECUTE_STUB", "1")
-
 from liorm.audit import AppendOnlyAuditLog, record_capability_denial, redact_query_log
 from liorm.capabilities import Profile, RawSqlCapability, assert_capability
 from liorm.errors import CapabilityDenied

@@ -4,6 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck disable=SC1091
+source "$ROOT/scripts/ensure_embed.sh"
 export PYTHONPATH="$ROOT"
 
 VENV="$ROOT/.venv"

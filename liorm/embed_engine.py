@@ -6,11 +6,14 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import tempfile
 from pathlib import Path
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+_EXEC_LOCK = threading.Lock()
+
 _PARAM_RE = re.compile(r"\$(\d+)")
 
 
@@ -71,14 +74,15 @@ class EmbeddedSession:
         return catalog.is_file() and catalog.stat().st_size > 0
 
     def exec_parameterized(self, sql: str, params: list[Any]) -> list[dict[str, Any]]:
-        flat = _flatten_sql(sql)
-        proc = _run_embed(
-            ["exec-json", str(self.data_dir), flat],
-            stdin=json.dumps([str(p) for p in params]),
-        )
-        if proc.returncode:
-            raise RuntimeError(proc.stderr.strip() or "lidb_embed exec-json failed")
-        return [dict(row) for row in json.loads(proc.stdout or "{}").get("rows", [])]
+        with _EXEC_LOCK:
+            flat = _flatten_sql(sql)
+            proc = _run_embed(
+                ["exec-json", str(self.data_dir), flat],
+                stdin=json.dumps([str(p) for p in params]),
+            )
+            if proc.returncode:
+                raise RuntimeError(proc.stderr.strip() or "lidb_embed exec-json failed")
+            return [dict(row) for row in json.loads(proc.stdout or "{}").get("rows", [])]
 
     def close(self) -> None:
         return
@@ -146,15 +150,15 @@ def seed_test_fixtures() -> None:
         rows = session.exec_parameterized(f"SELECT COUNT(*) AS n FROM {table}", [])
         return int(rows[0].get("n", 0)) if rows else 0
 
-    if count("agent_runs") == 0:
-        session.exec_parameterized(
-            "INSERT INTO agent_runs (id, status, publisher_id) VALUES (?, ?, ?)",
-            ["00000000-0000-4000-8000-000000000001", "running", pub],
-        )
     if count("publishers") == 0:
         session.exec_parameterized(
             "INSERT INTO publishers (id, name, public_key, display_name) VALUES (?, ?, ?, ?)",
             [pub, "pytest-publisher", "00" * 32, "Pytest Publisher"],
+        )
+    if count("agent_runs") == 0:
+        session.exec_parameterized(
+            "INSERT INTO agent_runs (id, status, publisher_id) VALUES (?, ?, ?)",
+            ["00000000-0000-4000-8000-000000000001", "running", pub],
         )
     pkg = "00000000-0000-4000-8000-000000000020"
     if count("packages") == 0:
