@@ -168,10 +168,176 @@ std::string NativeCatalog::unquote_literal(std::string_view lit) {
 NativeExecResult NativeCatalog::exec(std::string_view sql, const std::vector<std::string>& params) {
   auto q = trim_sql(sql);
   auto lq = lower(q);
-  if (lq.rfind("select", 0) == 0) return exec_select(q);
+  if (lq.rfind("select", 0) == 0) {
+    if (lq.find(" join ") != std::string::npos) return exec_select_join(q, params);
+    if (q.find('?') != std::string::npos) return exec_select_param(q, params);
+    return exec_select(q);
+  }
   if (lq.rfind("insert", 0) == 0) return exec_insert(q, params);
   if (lq.rfind("delete", 0) == 0) return exec_delete(q, params);
   return {};
+}
+
+
+NativeExecResult NativeCatalog::exec_select_join(std::string_view sql,
+                                                  const std::vector<std::string>& params) {
+  NativeExecResult result;
+  auto q = trim_sql(sql);
+  auto lq = lower(q);
+
+  auto from_pos = lq.find(" from ");
+  if (from_pos == std::string::npos) return result;
+  auto join_pos = lq.find(" join ");
+  if (join_pos == std::string::npos) return exec_select(sql);
+
+  std::string left_table = trim(q.substr(from_pos + 6, join_pos - (from_pos + 6)));
+  auto left_sp = left_table.find(' ');
+  if (left_sp != std::string::npos) left_table = left_table.substr(0, left_sp);
+
+  auto on_pos = lq.find(" on ", join_pos);
+  if (on_pos == std::string::npos) return result;
+  auto join_rest = trim(q.substr(join_pos + 6, on_pos - (join_pos + 6)));
+  auto join_sp = join_rest.find(' ');
+  std::string right_table = join_sp == std::string::npos ? join_rest : join_rest.substr(0, join_sp);
+
+  auto where_pos = lq.find(" where ", on_pos);
+  auto on_end = where_pos != std::string::npos ? where_pos : q.size();
+  auto on_segment = trim(q.substr(on_pos + 4, on_end - (on_pos + 4)));
+  auto eq_pos = on_segment.find('=');
+  if (eq_pos == std::string::npos) return result;
+  auto on_clause = trim(on_segment.substr(0, eq_pos));
+  auto dot_l = on_clause.rfind('.');
+  std::string left_key = dot_l == std::string::npos ? on_clause : trim(on_clause.substr(dot_l + 1));
+  auto rhs = trim(on_segment.substr(eq_pos + 1));
+  auto dot_r = rhs.rfind('.');
+  std::string right_key = dot_r == std::string::npos ? rhs : trim(rhs.substr(dot_r + 1));
+
+  std::optional<std::string> where_col;
+  std::optional<std::string> where_val;
+  std::size_t param_i = 0;
+  if (where_pos != std::string::npos) {
+    auto clause = trim(q.substr(where_pos + 7));
+    auto eq = clause.find('=');
+    if (eq != std::string::npos) {
+      where_col = trim(clause.substr(0, eq));
+      auto dot_w = where_col->rfind('.');
+      if (dot_w != std::string::npos) *where_col = trim(where_col->substr(dot_w + 1));
+      auto rhs_w = trim(clause.substr(eq + 1));
+      if (rhs_w == "?") {
+        if (param_i < params.size()) where_val = params[param_i++];
+      } else {
+        where_val = unquote_literal(rhs_w);
+      }
+    }
+  }
+
+  const auto& left_rows = tables_[left_table];
+  const auto& right_rows = tables_[right_table];
+
+  for (const auto& lr : left_rows) {
+    for (const auto& rr : right_rows) {
+      auto lk = lr.cols.find(left_key);
+      auto rk = rr.cols.find(right_key);
+      bool joined = lk != lr.cols.end() && rk != rr.cols.end() && lk->second == rk->second;
+      if (!joined) {
+        lk = lr.cols.find(right_key);
+        rk = rr.cols.find(left_key);
+        joined = lk != lr.cols.end() && rk != rr.cols.end() && lk->second == rk->second;
+      }
+      if (!joined) continue;
+      if (where_col && where_val) {
+        std::string wv;
+        auto wc_l = lr.cols.find(*where_col);
+        auto wc_r = rr.cols.find(*where_col);
+        if (wc_l != lr.cols.end()) wv = wc_l->second;
+        else if (wc_r != rr.cols.end()) wv = wc_r->second;
+        else continue;
+        if (wv != *where_val) continue;
+      }
+      NativeRow out;
+      for (const auto& [k, v] : lr.cols) out.cols[k] = v;
+      for (const auto& [k, v] : rr.cols) {
+        if (out.cols.find(k) == out.cols.end()) out.cols[k] = v;
+        else out.cols["p_" + k] = v;
+      }
+      result.rows.push_back(out);
+    }
+  }
+  return result;
+}
+
+
+
+NativeExecResult NativeCatalog::exec_select_param(std::string_view sql,
+                                                    const std::vector<std::string>& params) {
+  NativeExecResult result;
+  auto q = trim_sql(sql);
+  auto lq = lower(q);
+
+  auto from_pos = lq.find(" from ");
+  if (from_pos == std::string::npos) return result;
+  std::string table = trim(q.substr(from_pos + 6));
+  auto sp = table.find(' ');
+  if (sp != std::string::npos) table = table.substr(0, sp);
+
+  bool count_star = lq.find("count(*)") != std::string::npos;
+  std::optional<std::string> where_col;
+  std::optional<std::string> where_val;
+  std::size_t param_i = 0;
+  auto where_pos = lq.find(" where ");
+  if (where_pos != std::string::npos) {
+    auto clause = trim(q.substr(where_pos + 7));
+    auto eq = clause.find('=');
+    if (eq != std::string::npos) {
+      where_col = trim(clause.substr(0, eq));
+      auto rhs = trim(clause.substr(eq + 1));
+      if (rhs == "?") {
+        if (param_i < params.size()) where_val = params[param_i++];
+      } else {
+        where_val = unquote_literal(rhs);
+      }
+    }
+  }
+
+  auto sel_end = from_pos;
+  auto sel_part = trim(q.substr(6, sel_end - 6));
+  std::string col;
+  if (count_star) {
+    std::size_t n = 0;
+    for (const auto& row : tables_[table]) {
+      if (where_col && where_val) {
+        auto it = row.cols.find(*where_col);
+        if (it == row.cols.end() || it->second != *where_val) continue;
+      }
+      n++;
+    }
+    NativeRow r;
+    r.cols["count(*)"] = std::to_string(n);
+    result.rows.push_back(r);
+    return result;
+  }
+
+  auto as_pos = lower(sel_part).find(" as ");
+  col = as_pos == std::string::npos ? lower(trim(sel_part)) : lower(trim(sel_part.substr(as_pos + 4)));
+
+  for (const auto& row : tables_[table]) {
+    if (where_col && where_val) {
+      auto it = row.cols.find(*where_col);
+      if (it == row.cols.end() || it->second != *where_val) continue;
+    }
+    NativeRow out;
+    if (col == "*") {
+      out = row;
+    } else {
+      auto it = row.cols.find(col);
+      if (it != row.cols.end()) out.cols[col] = it->second;
+      for (const auto& [k, v] : row.cols) {
+        if (lower(sel_part).find(lower(k)) != std::string::npos) out.cols[k] = v;
+      }
+    }
+    result.rows.push_back(out);
+  }
+  return result;
 }
 
 NativeExecResult NativeCatalog::exec_select(std::string_view sql) {

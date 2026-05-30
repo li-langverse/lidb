@@ -38,7 +38,7 @@ class EmbeddedSession:
         return [dict(r) for r in json.loads(proc.stdout or "{}").get("rows",[])]
     def close(self): pass
 _SESSION=None; _SESSION_DIR=None; _READY=None
-_SESSION_LOCK=threading.Lock()
+_SESSION_LOCK=threading.RLock()
 def ensure_session():
     global _SESSION,_READY,_SESSION_DIR
     with _SESSION_LOCK:
