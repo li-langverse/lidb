@@ -108,14 +108,19 @@ def ensure_session() -> EmbeddedSession | None:
         return None
     if _SESSION:
         return _SESSION
-    session = EmbeddedSession(_default_data_dir())
-    if not session.open_and_migrate():
-        _READY = False
-        _SESSION = None
-        return None
-    _SESSION = session
-    _READY = True
-    return session
+    with _SESSION_LOCK:
+        if _SESSION:
+            return _SESSION
+        if _READY is False:
+            return None
+        session = EmbeddedSession(_default_data_dir())
+        if not session.open_and_migrate():
+            _READY = False
+            _SESSION = None
+            return None
+        _SESSION = session
+        _READY = True
+        return session
 
 
 def engine_ready() -> bool:
