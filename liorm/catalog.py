@@ -7,7 +7,7 @@ from liorm.errors import CatalogError
 # schema.table -> allowed columns (None = all columns allowed at compile time)
 _REGISTRY: dict[str, frozenset[str] | None] = {
     "public.publishers": frozenset(
-        {"id", "name", "display_name", "public_key", "created_at", "revoked_at"}
+        {"id", "name", "public_key", "created_at", "revoked_at"}
     ),
     "public.packages": frozenset(
         {"id", "name", "description", "repository_url", "created_at"}
