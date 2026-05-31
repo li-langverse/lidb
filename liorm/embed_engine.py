@@ -13,6 +13,7 @@ from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _EXEC_LOCK = threading.Lock()
+_SESSION_LOCK = threading.Lock()
 
 _PARAM_RE = re.compile(r"\$(\d+)")
 
