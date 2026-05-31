@@ -225,11 +225,17 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql, const std::vec
     return result;
   }
 
-  std::string col = "name";
   auto sel_part = trim(q.substr(7, from_pos - 7));
+  std::vector<std::string> select_cols;
   if (sel_part != "*") {
-    auto as_pos = lower(sel_part).find(" as ");
-    col = as_pos == std::string::npos ? lower(trim(sel_part)) : lower(trim(sel_part.substr(as_pos + 4)));
+    for (const auto& part : split_top_level_commas(sel_part)) {
+      auto pcol = trim(part);
+      auto as_pos = lower(pcol).find(" as ");
+      if (as_pos != std::string::npos) pcol = trim(pcol.substr(as_pos + 4));
+      auto dot = pcol.rfind('.');
+      if (dot != std::string::npos) pcol = pcol.substr(dot + 1);
+      select_cols.push_back(lower(trim(pcol)));
+    }
   }
 
   for (const auto& row : rows) {
@@ -238,9 +244,18 @@ NativeExecResult NativeCatalog::exec_select(std::string_view sql, const std::vec
       if (it == row.cols.end() || it->second != *where_val) continue;
     }
     NativeRow out;
-    for (const auto& [k, v] : row.cols) {
-      if (sel_part == "*") { out.cols[k] = v; }
-      else if (lower(k) == col) { out.cols[k] = v; }
+    if (sel_part == "*") {
+      out.cols = row.cols;
+    } else {
+      for (const auto& [k, v] : row.cols) {
+        const auto lk = lower(k);
+        for (const auto& want : select_cols) {
+          if (lk == want) {
+            out.cols[k] = v;
+            break;
+          }
+        }
+      }
     }
     if (!out.cols.empty()) result.rows.push_back(out);
   }
