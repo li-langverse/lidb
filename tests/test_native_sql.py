@@ -80,6 +80,33 @@ def test_execute_parameterized_where():
     assert all(row.get("status") == "running" for row in result.rows)
 
 
+def test_exec_json_multi_column_select():
+    embed = _embed_binary() or _build_embed()
+    if embed is None:
+        pytest.skip("cmake/lidb_embed unavailable")
+    reset_session_for_tests()
+    data = repo_root() / "build" / "pytest-data-multi"
+    data.mkdir(parents=True, exist_ok=True)
+    subprocess.run([str(embed), "open", str(data)], check=True, capture_output=True, text=True)
+    subprocess.run([str(embed), "migrate", str(data)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        [str(embed), "exec-json", str(data), "INSERT INTO publishers (id, name, public_key) VALUES (?, ?, ?)"],
+        input=json.dumps(["00000000-0000-4000-8000-000000000099", "test-pub", "00" * 32]),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    proc = subprocess.run(
+        [str(embed), "exec-json", str(data), "SELECT id, name FROM publishers WHERE name = ?"],
+        input=json.dumps(["test-pub"]),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(proc.stdout)
+    assert payload["rows"] == [{"id": "00000000-0000-4000-8000-000000000099", "name": "test-pub"}]
+
+
 def test_exec_json_cli_roundtrip():
     embed = _embed_binary() or _build_embed()
     if embed is None:
