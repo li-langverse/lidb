@@ -1,4 +1,4 @@
-"""Registry OLTP service — real lidb reads/writes via liorm (PH-DB-4 MVP)."""
+﻿"""Registry OLTP service — real lidb reads/writes via liorm (PH-DB-4 MVP)."""
 
 from __future__ import annotations
 
@@ -25,9 +25,13 @@ class PackageVersionRecord:
     yanked: bool
     package_id: str
     version_id: str
+    manifest_signature: str | None = None
+    source_type: str | None = None
+    source_url: str | None = None
+    source_tag: str | None = None
 
     def to_api_dict(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "name": self.name,
             "version": self.version,
             "tree_digest": self.tree_digest,
@@ -37,6 +41,15 @@ class PackageVersionRecord:
             "published_at": self.published_at,
             "yanked": self.yanked,
         }
+        if self.manifest_signature is not None:
+            out["manifest_signature"] = self.manifest_signature
+        if self.source_type is not None:
+            out["source_type"] = self.source_type
+        if self.source_url is not None:
+            out["source_url"] = self.source_url
+        if self.source_tag is not None:
+            out["source_tag"] = self.source_tag
+        return out
 
 
 class RegistryOltp:
@@ -101,6 +114,10 @@ class RegistryOltp:
         proof_digest: str | None = None,
         package_description: str | None = None,
         repository_url: str | None = None,
+        manifest_signature: str | None = None,
+        source_type: str | None = None,
+        source_url: str | None = None,
+        source_tag: str | None = None,
     ) -> PackageVersionRecord:
         pub_id = self._ensure_publisher(publisher_name, publisher_public_key)
         pkg_id = self._ensure_package(package_name, package_description, repository_url)
@@ -114,6 +131,10 @@ class RegistryOltp:
                 "tree_digest": tree_digest,
                 "proof_digest": proof_digest if proof_digest else "-",
                 "coverage_pct": str(coverage_pct),
+                "manifest_signature": manifest_signature if manifest_signature else "-",
+                "source_type": source_type if source_type else "-",
+                "source_url": source_url if source_url else "-",
+                "source_tag": source_tag if source_tag else "-",
                 "publisher_id": pub_id,
             },
         )
@@ -161,6 +182,12 @@ class RegistryOltp:
         return execute(plan_id, params)
 
     @staticmethod
+    def _optional_text(value: Any) -> str | None:
+        if value in (None, "", "-"):
+            return None
+        return str(value)
+
+    @staticmethod
     def _row_to_record(package_name: str, row: dict[str, Any]) -> PackageVersionRecord:
         yanked_raw = row.get("yanked", False)
         yanked = yanked_raw in (True, "true", "1", 1)
@@ -169,11 +196,15 @@ class RegistryOltp:
             name=package_name,
             version=str(row["version"]),
             tree_digest=str(row["tree_digest"]),
-            proof_digest=str(proof) if proof not in (None, "") else None,
+            proof_digest=str(proof) if proof not in (None, "", "-") else None,
             coverage_pct=float(row.get("coverage_pct", 0)),
             publisher_id=str(row.get("publisher_id", "")),
             published_at=str(row["published_at"]) if row.get("published_at") else None,
             yanked=yanked,
             package_id=str(row.get("package_id", "")),
             version_id=str(row["id"]),
+            manifest_signature=RegistryOltp._optional_text(row.get("manifest_signature")),
+            source_type=RegistryOltp._optional_text(row.get("source_type")),
+            source_url=RegistryOltp._optional_text(row.get("source_url")),
+            source_tag=RegistryOltp._optional_text(row.get("source_tag")),
         )

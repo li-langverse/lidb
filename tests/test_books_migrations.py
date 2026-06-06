@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,8 @@ def test_de_tax_category_seed_stub():
     text = path.read_text(encoding="utf-8")
     assert "EXP_BEWIRTUNG_70" in text
     assert "REV_KLEINUNTERNEHMER" in text
+    count = len(re.findall(r"\('EXP_|\('REV_|\('INC_", text))
+    assert count >= 80, f"expected >= 80 categories, got {count}"
 
 
 def test_rls_cross_org_deny_policies():

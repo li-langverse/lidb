@@ -1,4 +1,4 @@
-"""Frozen registry-min plans aligned with migrations/001_registry.sql and lip read paths."""
+﻿"""Frozen registry-min plans aligned with migrations/001_registry.sql and lip read paths."""
 
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ _REGISTRY_PLANS: tuple[RegistryPlanSpec, ...] = (
         plan_id="registry:version_by_pkg_version:v1",
         sql=(
             "SELECT id, package_id, version, tree_digest, proof_digest, coverage_pct, "
+            "manifest_signature, source_type, source_url, source_tag, "
             "publisher_id, published_at, yanked FROM package_versions "
             "WHERE package_id = $1 AND version = $2 LIMIT 1"
         ),
@@ -39,7 +40,8 @@ _REGISTRY_PLANS: tuple[RegistryPlanSpec, ...] = (
         name="registry.versions_for_package",
         plan_id="registry:versions_for_package:v1",
         sql=(
-            "SELECT id, version, tree_digest, proof_digest, coverage_pct, published_at, yanked "
+            "SELECT id, version, tree_digest, proof_digest, coverage_pct, "
+            "manifest_signature, source_type, source_url, source_tag, published_at, yanked "
             "FROM package_versions WHERE package_id = $1"
         ),
         param_schema={"package_id": "uuid"},
@@ -62,8 +64,9 @@ _REGISTRY_PLANS: tuple[RegistryPlanSpec, ...] = (
         plan_id="registry:insert_package_version:v1",
         sql=(
             "INSERT INTO package_versions "
-            "(id, package_id, version, tree_digest, proof_digest, coverage_pct, publisher_id) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7)"
+            "(id, package_id, version, tree_digest, proof_digest, coverage_pct, "
+            "manifest_signature, source_type, source_url, source_tag, publisher_id) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
         ),
         param_schema={
             "id": "uuid",
@@ -72,6 +75,10 @@ _REGISTRY_PLANS: tuple[RegistryPlanSpec, ...] = (
             "tree_digest": "text",
             "proof_digest": "text",
             "coverage_pct": "text",
+            "manifest_signature": "text",
+            "source_type": "text",
+            "source_url": "text",
+            "source_tag": "text",
             "publisher_id": "uuid",
         },
         ir={"verb": "insert", "table": "package_versions"},
