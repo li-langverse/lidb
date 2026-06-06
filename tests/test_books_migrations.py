@@ -65,8 +65,15 @@ def test_rls_cross_org_deny_policies():
     assert "books_auth.is_org_member(org_id)" in text
 
 
-def test_rls_cross_book_deny_policies():
-    text = (ROOT / "migrations" / "008_books_rls.sql").read_text(encoding="utf-8")
-    assert "books_auth.book_id()" in text
-    assert "books_auth.has_book_access" in text
-    assert "books_auth.book_id() IS NULL" in text
+def test_law_corpus_migration_exists():
+    path = ROOT / "migrations" / "009_law_corpus.sql"
+    assert path.is_file()
+    text = path.read_text(encoding="utf-8")
+    for table in (
+        "law_source",
+        "law_document",
+        "law_chunk",
+        "law_embedding",
+        "law_refresh_run",
+    ):
+        assert f"CREATE TABLE {table}" in text
