@@ -117,3 +117,15 @@ def test_crypto_ledger_migration_exists():
         "crypto_tax_minute",
     ):
         assert f"CREATE TABLE {table}" in text
+
+
+def test_crypto_shared_market_migration_exists():
+    text = (ROOT / "migrations" / "015_crypto_shared_market.sql").read_text(encoding="utf-8")
+    for table in (
+        "crypto_market_minute",
+        "crypto_chain_event",
+        "crypto_sync_raw",
+        "crypto_sync_cursor",
+    ):
+        assert f"CREATE TABLE {table}" in text
+    assert "user_id" not in text.split("CREATE TABLE crypto_market_minute")[1].split(";")[0]
