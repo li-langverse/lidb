@@ -80,3 +80,40 @@ def test_law_corpus_migration_exists():
         "law_refresh_run",
     ):
         assert f"CREATE TABLE {table}" in text
+
+
+def test_ledger_migration_exists():
+    text = (ROOT / "migrations" / "010_ledger.sql").read_text(encoding="utf-8")
+    for table in (
+        "ledger_account",
+        "journal_entry",
+        "journal_line",
+        "tax_period_close",
+        "bank_import_batch",
+        "bank_import_line",
+    ):
+        assert f"CREATE TABLE {table}" in text
+
+
+def test_ledger_rls_migration_exists():
+    text = (ROOT / "migrations" / "011_ledger_rls.sql").read_text(encoding="utf-8")
+    assert "ALTER TABLE journal_entry ENABLE ROW LEVEL SECURITY" in text
+    assert "books_tenant_journal_entry" in text
+
+
+def test_tax_year_entitlement_migration_exists():
+    text = (ROOT / "migrations" / "012_tax_year_entitlement.sql").read_text(encoding="utf-8")
+    assert "tax_year" in text
+    assert "CREATE TABLE book_year_entitlement" in text
+
+
+def test_crypto_ledger_migration_exists():
+    text = (ROOT / "migrations" / "014_crypto_ledger.sql").read_text(encoding="utf-8")
+    for table in (
+        "crypto_wallet",
+        "crypto_exchange_account",
+        "crypto_transaction",
+        "crypto_lot",
+        "crypto_tax_minute",
+    ):
+        assert f"CREATE TABLE {table}" in text
